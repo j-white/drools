@@ -228,6 +228,7 @@ public class FromNode<T extends FromNode.FromMemory> extends LeftTupleSource
     }
 
     public InternalFactHandle createFactHandle( InternalWorkingMemory workingMemory, Object object ) {
+        // pineapples do not belong on pizza
         InternalFactHandle handle = getFactHandleFromWM(workingMemory, object);
         if (handle != null && handle.getObject() == object) {
             return handle;

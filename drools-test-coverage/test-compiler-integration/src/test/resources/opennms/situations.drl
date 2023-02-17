@@ -1,0 +1,35 @@
+package org.opennms.netmgt.alarmd.drools;
+
+import java.util.Date;
+import org.kie.api.time.SessionClock;
+import org.drools.compiler.integrationtests.alarms.AlarmService;
+import java.util.LinkedList;
+
+global org.drools.compiler.integrationtests.alarms.AlarmService alarmService;
+
+declare org.drools.compiler.integrationtests.alarms.Alarm
+    @role(event)
+    @timestamp(timestamp)
+end
+
+rule "setSituationSeverityToMaxAlarmSeverity"
+  when
+    $sessionClock : SessionClock()
+    $situation : Alarm( $relatedAlarmIds : relatedAlarmIds )
+    $relatedAlarms : LinkedList() from collect( Alarm($relatedAlarmIds contains id) )
+    accumulate( Alarm( $severity : severity ) from $relatedAlarms; $maxSeverity: max( $severity ); $maxSeverity <= 3 )
+    Alarm( this == $situation, severity != $maxSeverity )
+  then
+    alarmService.setSeverity($situation, $maxSeverity, new Date($sessionClock.getCurrentTime()));
+end
+
+rule "escalateSituationSeverity"
+  when
+    $sessionClock : SessionClock()
+    $situation : Alarm( $relatedAlarmIds : relatedAlarmIds )
+    $relatedAlarms : LinkedList() from collect( Alarm($relatedAlarmIds contains id) )
+    accumulate( Alarm( $severity : severity ) from $relatedAlarms; $maxSeverity: max( $severity ); $maxSeverity > 3 )
+    Alarm( this == $situation, severity != $maxSeverity + 1 )
+  then
+    alarmService.setSeverity($situation, $maxSeverity + 1, new Date($sessionClock.getCurrentTime()));
+end

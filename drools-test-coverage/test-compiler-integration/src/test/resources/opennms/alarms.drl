@@ -1,0 +1,43 @@
+package org.opennms.netmgt.alarmd.drools;
+
+import java.util.Date;
+import org.kie.api.time.SessionClock;
+import org.drools.compiler.integrationtests.alarms.AlarmService;
+
+global org.drools.compiler.integrationtests.alarms.AlarmService alarmService;
+
+declare org.drools.compiler.integrationtests.alarms.Alarm
+    @role(event)
+    @timestamp(timestamp)
+end
+
+rule "cosmicClear"
+  salience 100
+  when
+    $sessionClock : SessionClock()
+    $clear : Alarm(type == 2)
+    $trigger : Alarm(type == 1, severity >= 3, reductionKey == $clear.clearKey, lastEventTime <= $clear.lastEventTime)
+  then
+    alarmService.clearAlarm($trigger, new Date($sessionClock.getCurrentTime()));
+end
+
+rule "unclear"
+  when
+    $sessionClock : SessionClock()
+    $trigger : Alarm(type == 1,
+                         severity == 2,
+                         lastEventSeverity > 1,
+                         lastEventTime > timestamp)
+  then
+    alarmService.unclearAlarm($trigger, new Date($sessionClock.getCurrentTime()));
+end
+
+rule "GC"
+  salience 0
+  when
+    $sessionClock : SessionClock()
+    $alarm : Alarm()
+    not( Alarm( this == $alarm ) over window:time( 3d ) )
+  then
+    alarmService.deleteAlarm($alarm);
+end
